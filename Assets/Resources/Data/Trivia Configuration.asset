@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f3482ca8da6f214c9023b04fe964974, type: 3}
+  m_Name: Trivia Configuration
+  m_EditorClassIdentifier: 
+  Categories:
+  - Name: Geschiedenis
+    Type: 0
+    Icon: {fileID: 21300000, guid: 490faf14e4efeb14b841103425a6d918, type: 3}
+    TextQuestions: {fileID: 11400000, guid: 9f6cf19dca947bd4b9f0ed996a7021b8, type: 2}
+  - Name: Natuur
+    Type: 1
+    Icon: {fileID: 21300000, guid: 96d8b61af091d3c4c870ef6fdc954c14, type: 3}
+    TextQuestions: {fileID: 11400000, guid: f8890b59a1676ee4c9e6a3ad20254827, type: 2}
+  - Name: Wetenschap
+    Type: 2
+    Icon: {fileID: 21300000, guid: 6949c3053b735a84f96bc6d56501c4c5, type: 3}
+    TextQuestions: {fileID: 11400000, guid: 793511357e65ef542b6d87d0367a0b66, type: 2}
+  - Name: TV
+    Type: 3
+    Icon: {fileID: 21300000, guid: 2a976fd3d5858724c880e705e58cc2b4, type: 3}
+    TextQuestions: {fileID: 11400000, guid: a02d68cd2a1761a4c8020b22b641eb7b, type: 2}
+  - Name: Muziek
+    Type: 4
+    Icon: {fileID: 21300000, guid: d4f971091c6f4ca4e80421a3c1bae6bd, type: 3}
+    TextQuestions: {fileID: 11400000, guid: fb23fe7e2f9390046870b1ba4420189d, type: 2}
