@@ -1,6 +1,6 @@
-﻿using System.Collections;
+﻿using DG.Tweening;
+using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -30,8 +30,12 @@ namespace Trivia
         }
         #endregion
 
+        public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, quit }
+        public enum Category { history, nature, science, tv, music }
+
+
         [Header("Configuration")]
-        [SerializeField] TriviaConfiguration triviaConfiguraton;
+        public TriviaConfiguration m_TriviaConfiguraton;
         [SerializeField] PlayersConfiguration playerConfiguration;
 
         [Header("Screens")]
@@ -40,10 +44,11 @@ namespace Trivia
         [SerializeField] GameObject scoreCanvas;
 
         [Header("Quiz elements")]
-        [SerializeField] QuestionTextController textQuestion;
+        [SerializeField] QuestionTextController textQuestionController;
         [SerializeField] GameObject answersObject;
         [SerializeField] Button answerTemplate;
         [SerializeField] GameObject countdownTimer;
+        [SerializeField] TMPro.TextMeshProUGUI fullAnswerText;
 
         [Header("Answer buton styles")]
         [SerializeField] Sprite normal;
@@ -64,14 +69,12 @@ namespace Trivia
         [SerializeField] AudioClip answerCorrect;
         [SerializeField] AudioClip answerError;
 
-        enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, quit }
-        public enum Category { history, nature, science, tv, music }
-
         AudioSource _audio;
-        GameStatus _gameStatus;
+        GameStatus m_GameStatus;
         CurrentGame _currentGame;
         TimerController _timer;
         AudioSource _timerAudio;
+        Image _roundImage;
 
         int _answerIndex;
         List<Button> _answerButtons;
@@ -80,7 +83,7 @@ namespace Trivia
         void Start()
         {
             SingletonInstanceGuard();
-            Init();
+            Initialize();
             StartCoroutine(GameLoop());
         }
 
@@ -92,16 +95,18 @@ namespace Trivia
             SetGameStatus(GameStatus.answered);
         }
 
+        public void QuestionAdded(Category category) => m_TriviaConfiguraton.RaiseCategoryConfigChangedEvent(category);
+
         IEnumerator GameLoop()
         {
             SetGameStatus(GameStatus.start);
             _currentGame = new CurrentGame();
 
-            while (_gameStatus != GameStatus.quit)
+            while (m_GameStatus != GameStatus.quit)
             {
-                while (_gameStatus != GameStatus.spinWheel && _gameStatus != GameStatus.question)
+                while (m_GameStatus != GameStatus.spinWheel && m_GameStatus != GameStatus.question)
                 {
-                    if (_gameStatus == GameStatus.start)
+                    if (m_GameStatus == GameStatus.start)
                     {
                         SetGameStatus(GameStatus.menuPanel);
                         _currentGame.Reset();
@@ -143,44 +148,57 @@ namespace Trivia
             SetGameStatus(GameStatus.spinWheel);
         }
 
+        // Wait for the currentplayer to spin the wheel. 
+        // - show: full answer
+        // - hide: timer, answers
+        // - fade out round background
         IEnumerator SpinWheelLoop()
         {
             answersObject.SetActive(false);
             countdownTimer.SetActive(false);
-            textQuestion.ClearText();
+            fullAnswerText.gameObject.SetActive(true);
             spinButton.interactable = true;
+            FadeRoundBackground();
 
             var player = GetCurrentPlayer();
             playerNameText.text = player.Name;
             playerImage.sprite = player.Icon;
 
-            while (_gameStatus == GameStatus.spinWheel)
+            while (m_GameStatus == GameStatus.spinWheel)
                 yield return null;
         }
 
+        // Wait for the question to be answered or time runs out.
+        // - show: timer, answers
         IEnumerator QuestionStartLoop()
         {
+            FadeRoundBackground(true);
+
             var q = GetTextQuestion();
-            textQuestion.SetText(q.Question);
-            while (!textQuestion.Done)
+            textQuestionController.SetText(q.Question);
+            fullAnswerText.text = q.FullAnswer;
+
+            while (!textQuestionController.Done)
                 yield return null;
 
-            CreateAnswers(q.Answers, q.CorrectAnswerIndex);
+            CreateAnswers(q.Answers, q.Correct);
 
             countdownTimer.SetActive(true);
             _timer.StartTimer();
             _timerAudio.PlayOneShot(timerTicking);
             _answerIndex = -1;
 
-            while (_gameStatus == GameStatus.question)
+            while (m_GameStatus == GameStatus.question)
                 yield return null;
         }
 
+        // Process the anwers
         IEnumerator QuestionAnswerLoop()
         {
             _currentGame.Question++;
 
             var buttons = answersObject.GetComponentsInChildren<Button>();
+
             foreach (Button button in buttons)
                 if (button.gameObject.name != answerTemplate.gameObject.name)
                     button.interactable = false;
@@ -222,6 +240,49 @@ namespace Trivia
             }
         }
 
+        void Initialize()
+        {
+            _answerButtons = new List<Button>();
+            pickerWheel.SetPieces(GetAllCatagories());
+
+            startButton.onClick.AddListener(() => StartPlaying());
+            spinButton.onClick.AddListener(() =>
+            {
+                spinButton.interactable = false;
+                SetButtonText(spinButton, "Draaien");
+
+                pickerWheel.OnSpinStart(() =>
+                {
+                    fullAnswerText.gameObject.SetActive(false);
+                    textQuestionController.ClearText();
+                });
+
+                pickerWheel.OnSpinEnd(wheelPiece =>
+                {
+                    SetCategory(wheelPiece.Category);
+                    SetButtonText(spinButton, "Draai");
+                });
+                pickerWheel.Spin();
+            });
+            stopButton.onClick.AddListener(() =>
+            {
+                print("stoppie");
+            });
+
+            _roundImage = answersObject.GetComponentInParent<Image>();
+
+            TryGetComponent(out _audio);
+
+            countdownTimer.TryGetComponent(out _timer);
+            countdownTimer.TryGetComponent(out _timerAudio);
+
+            _timer.onTimerEnd.AddListener(HandleTimerEnd);
+
+            foreach (CategoryModel cat in m_TriviaConfiguraton.Categories)
+                StartCoroutine(cat.TextQuestions.LoadQuestions());
+        }
+
+
         void CreateAnswers(List<string> answers, int correctAnswerIndex)
         {
             _correctIndex = correctAnswerIndex;
@@ -247,37 +308,23 @@ namespace Trivia
             }
         }
 
-
-        void Init()
+        void FadeRoundBackground(bool fadeIn = false)
         {
-            _answerButtons = new List<Button>();
-            pickerWheel.SetPieces(GetCatagories());
+            float target;
+            Ease easing;
 
-            startButton.onClick.AddListener(() => StartPlaying());
-            spinButton.onClick.AddListener(() =>
+            if (fadeIn)
             {
-                print("kilk");
-                spinButton.interactable = false;
-                SetButtonText(spinButton, "Draaien");
-
-                pickerWheel.OnSpinEnd(wheelPiece =>
-                {
-                    SetCategory(wheelPiece.Category);
-                    SetButtonText(spinButton, "Draai");
-                });
-                pickerWheel.Spin();
-            });
-            stopButton.onClick.AddListener(() =>
+                target = (float).5f;
+                easing = Ease.InQuad;
+            }
+            else
             {
-                print("stoppie");
-            });
+                target = (float).2f;
+                easing = Ease.OutQuad;
+            }
 
-            TryGetComponent(out _audio);
-
-            countdownTimer.TryGetComponent(out _timer);
-            countdownTimer.TryGetComponent(out _timerAudio);
-
-            _timer.onTimerEnd.AddListener(HandleTimerEnd);
+            _roundImage.DOFade(target, 1f).SetEase(easing);
         }
 
         void HandleTimerEnd()
@@ -291,30 +338,28 @@ namespace Trivia
         void SetGameStatus(GameStatus status)
         {
             print(status);
-            _gameStatus = status;
+            m_GameStatus = status;
         }
+
         void SetCategory(Category category)
         {
             _currentGame.Category = category;
             SetGameStatus(GameStatus.question);
         }
+
         void SetButtonText(Button button, string text)
         {
             var buttontext = button.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
             buttontext.text = text;
         }
 
-        List<CategoryModel> GetCatagories()
-        {
-            return triviaConfiguraton.Categories;
-        }
+        public List<CategoryModel> GetAllCatagories() => m_TriviaConfiguraton.Categories;
+
+        public List<PlayerModel> GetPlayers() => playerConfiguration.Players;
 
         PlayerModel GetCurrentPlayer() => playerConfiguration.Players[_currentGame.Player];
 
-        QuestionTextModel GetTextQuestion()
-        {
-            return triviaConfiguraton.GetTextQuestion(_currentGame.Category);
-        }
+        QuestionTextModel GetTextQuestion() => m_TriviaConfiguraton.GetTextQuestion(_currentGame.Category);
 
     }
 

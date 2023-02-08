@@ -22,7 +22,7 @@ namespace Trivia
 
         internal int Rounds;
         internal int Questions;
-        internal int Correct;
+        internal int Points;
     }
 
 }

@@ -1,25 +1,39 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+
+using static Trivia.GameManager;
 
 namespace Trivia
 {
     [CreateAssetMenu(menuName = "Trivia/Create Text Questions", fileName = "Trivia Text Questions (catergory)")]
     public class TextQuestionConfiguration : ScriptableObject
     {
-        public List<QuestionTextModel> Questions;
-        public int TotalQuestions => Questions?.Count ?? 0;
+        public Category category;
 
-        internal QuestionTextModel GetQuestion()
+        public int TotalQuestions => Questions.List?.Count ?? 0;
+
+        TextQuestions Questions;
+        internal bool m_QuestionsLoaded;
+
+        public IEnumerator LoadQuestions()
         {
-            var questions = Questions.Where(q => !q.isAsked).ToList();
+            Questions = QuestionLoader.LoadTextQuestions(category);
+            yield return null;
+            m_QuestionsLoaded = true;
+        }
 
-            if (!questions.Any() && TotalQuestions > 0)
-            {
-                ResetAskedFlags();
-                questions = Questions.Where(q => !q.isAsked).ToList();
-            }
-            else
+        public void AddQuestion(QuestionTextModel question)
+        {
+            Questions.List.Add(question);
+        }
+
+        public TextQuestions GetTextQuestions() => Questions;
+
+        public QuestionTextModel GetQuestion()
+        {
+            if (TotalQuestions == 0)
             {
                 return new QuestionTextModel
                 {
@@ -30,14 +44,28 @@ namespace Trivia
                         "Dit niet helaas..."
                     }
                 };
+            }
 
+            Debug.Log("Category: " + category.ToString());
+            Debug.Log("Total: " + TotalQuestions);
+            var questions = Questions.List?.Where(q => !q.isAsked).ToList();
+
+            if (!questions.Any())
+            {
+                Debug.Log("ResetAskedFlags");
+
+                ResetAskedFlags();
+                questions = Questions.List?.Where(q => !q.isAsked).ToList();
             }
 
             int index = Random.Range(0, questions.Count());
-            return questions[index];
+            var q = questions[index];
+            q.isAsked= true;
+
+            return q;
         }
 
-        public void ResetAskedFlags() => Questions.Where(q => q.isAsked).Select(q => { q.isAsked = false; return q; }).ToList();
+        public void ResetAskedFlags() => Questions.List?.Where(q => q.isAsked).Select(q => { q.isAsked = false; return q; }).ToList();
     }
 
     [System.Serializable]
@@ -45,8 +73,17 @@ namespace Trivia
     {
         public string Question;
         public List<string> Answers;
-        public int CorrectAnswerIndex;
+        public int Correct;
+        public string FullAnswer;
 
         internal bool isAsked;
     }
+
+    [System.Serializable]
+    public class TextQuestions
+    {
+        public TextQuestions() => List = new();
+        public List<QuestionTextModel> List;
+    }
+
 }
