@@ -58,12 +58,10 @@ namespace Trivia
 
         void Start()
         {
-            pieceAngle = 360 / wheelPieces.Length;
-            halfPieceAngle = pieceAngle / 2f;
-            halfPieceAngleWithPaddings = halfPieceAngle - (halfPieceAngle / 4f);
-
+            SetupPieces();
             SetupAudio();
         }
+
 
         public void SetPieces(List<CategoryModel> categories)
         {
@@ -81,12 +79,22 @@ namespace Trivia
             }
 
             wheelPieces = pieces.ToArray();
+            SetupPieces();
             Generate();
 
             CalculateWeightsAndIndices();
 
             if (nonZeroChancesIndices.Count == 0)
                 Debug.LogError("You can't set all pieces chance to zero");
+        }
+
+        void SetupPieces()
+        {
+            if (wheelPieces.Length==0) return;
+
+            pieceAngle = 360 / wheelPieces.Length;
+            halfPieceAngle = pieceAngle / 2f;
+            halfPieceAngleWithPaddings = halfPieceAngle - (halfPieceAngle / 4f);
         }
 
         void SetupAudio()
@@ -235,8 +243,8 @@ namespace Trivia
             if (PickerWheelTransform != null)
                 PickerWheelTransform.localScale = new Vector3(wheelSize, wheelSize, 1f);
 
-            if (wheelPieces.Length > piecesMax || wheelPieces.Length < piecesMin)
-                Debug.LogError("[ PickerWheelwheel ]  pieces length must be between " + piecesMin + " and " + piecesMax);
+            //if (wheelPieces.Length > piecesMax || wheelPieces.Length < piecesMin)
+            //    Debug.LogError("[ PickerWheelwheel ]  pieces length must be between " + piecesMin + " and " + piecesMax);
         }
     }
 }

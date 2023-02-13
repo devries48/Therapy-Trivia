@@ -28,6 +28,6 @@ namespace Trivia
         }
 
 
-        static string GetFilePath(Category category) => $"{Application.dataPath}/Resources/Data/Files/Text-{category}).json";
+        static string GetFilePath(Category category) => $"{Application.dataPath}/Resources/Data/Files/Text-{category}.json";
     }
 }

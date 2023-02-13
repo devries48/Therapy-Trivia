@@ -31,7 +31,7 @@ namespace Trivia
         #endregion
 
         public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, quit }
-        public enum Category { history, nature, science, tv, music }
+        public enum Category { history, nature, science, tv, music, sport }
 
 
         [Header("Configuration")]
@@ -176,7 +176,7 @@ namespace Trivia
 
             var q = GetTextQuestion();
             textQuestionController.SetText(q.Question);
-            fullAnswerText.text = q.FullAnswer;
+            fullAnswerText.text = q.FullAnswer != "" ? q.FullAnswer : q.Answers[q.Correct];
 
             while (!textQuestionController.Done)
                 yield return null;

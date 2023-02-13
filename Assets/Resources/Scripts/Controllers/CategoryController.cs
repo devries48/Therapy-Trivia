@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -12,6 +13,8 @@ namespace Trivia
     {
         [SerializeField] Transform _template;
 
+        List<CategoryModel> _categoryList;
+
         void Start() => StartCoroutine(Initialize());
 
         IEnumerator Initialize()
@@ -21,15 +24,17 @@ namespace Trivia
             while (Instance == null)
                 yield return null;
 
-            var list = Instance.GetAllCatagories().OrderBy(c => c.Name).ToList();
+            _categoryList = Instance.GetAllCatagories().OrderBy(c => c.Name).ToList();
 
-            foreach (var catagory in list)
+            foreach (var model in _categoryList)
             {
                 var panel = Instantiate(_template, transform);
-                SetToggle(panel, catagory.Active);
-                SetName(panel, catagory.Name);
-                SetImage(panel, catagory.Icon);
-                StartCoroutine(SetCount(panel, catagory));
+                panel.name = model.Type.ToString();
+
+                SetToggle(panel, model.Active);
+                SetName(panel, model.Name);
+                SetImage(panel, model.Icon);
+                StartCoroutine(SetCount(panel, model));
                 panel.gameObject.SetActive(true);
             }
 
@@ -38,7 +43,10 @@ namespace Trivia
 
         void RefreshCategory(Category category)
         {
-            print("event: " + category); 
+            var panel = transform.Find(category.ToString());
+            var model = _categoryList.First(c=> c.Type.Equals(category));
+
+            StartCoroutine(SetCount(panel, model));
         }
 
         void SetToggle(Transform panel, bool isActive)

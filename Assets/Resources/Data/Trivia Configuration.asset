@@ -29,7 +29,7 @@ MonoBehaviour:
     Icon: {fileID: 21300000, guid: 6949c3053b735a84f96bc6d56501c4c5, type: 3}
     TextQuestions: {fileID: 11400000, guid: 793511357e65ef542b6d87d0367a0b66, type: 2}
   - Active: 1
-    Name: TV
+    Name: Film en tv
     Type: 3
     Icon: {fileID: 21300000, guid: 2a976fd3d5858724c880e705e58cc2b4, type: 3}
     TextQuestions: {fileID: 11400000, guid: a02d68cd2a1761a4c8020b22b641eb7b, type: 2}
@@ -38,3 +38,8 @@ MonoBehaviour:
     Type: 4
     Icon: {fileID: 21300000, guid: d4f971091c6f4ca4e80421a3c1bae6bd, type: 3}
     TextQuestions: {fileID: 11400000, guid: fb23fe7e2f9390046870b1ba4420189d, type: 2}
+  - Active: 1
+    Name: Sport
+    Type: 5
+    Icon: {fileID: 21300000, guid: 8820a808445bcf34a839edca6f437c01, type: 3}
+    TextQuestions: {fileID: 11400000, guid: fe51daafa75a4cb458d66a2b880b08cc, type: 2}
