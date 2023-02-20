@@ -73,6 +73,7 @@ namespace Trivia
                 {
                     Icon = category.Icon,
                     Label = category.Name,
+                    Category=category.Type,
                     Chance = 100
                 };
                 pieces.Add(piece);
@@ -170,7 +171,7 @@ namespace Trivia
                 prevAngle = currentAngle = wheelCircle.eulerAngles.z;
 
                 wheelCircle
-                    .DORotate(targetRotation, spinDuration, RotateMode.Fast)
+                    .DORotate(targetRotation, spinDuration, RotateMode.FastBeyond360)
                     .SetEase(Ease.InOutQuart)
                     .OnUpdate(() =>
                     {

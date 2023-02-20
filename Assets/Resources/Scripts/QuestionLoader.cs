@@ -16,6 +16,7 @@ namespace Trivia
         public static TextQuestions LoadTextQuestions(Category category)
         {
             string path = GetFilePath(category);
+
             if (File.Exists(path))
             {
                 var jsonString = File.ReadAllText(path);
@@ -27,7 +28,6 @@ namespace Trivia
                 return new TextQuestions();
         }
 
-
-        static string GetFilePath(Category category) => $"{Application.dataPath}/Resources/Data/Files/Text-{category}.json";
+        static string GetFilePath(Category category) => $"{Application.streamingAssetsPath}/Text-{category}.json";
     }
 }

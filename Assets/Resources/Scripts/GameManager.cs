@@ -50,30 +50,34 @@ namespace Trivia
         [SerializeField] GameObject countdownTimer;
         [SerializeField] TMPro.TextMeshProUGUI fullAnswerText;
 
-        [Header("Answer buton styles")]
+        [Header("Answer button styles")]
         [SerializeField] Sprite normal;
         [SerializeField] Sprite correct;
         [SerializeField] Sprite incorrect;
 
-        [Header("UI elements")]
+        [Header("Buttons")]
         [SerializeField] Button startButton;
         [SerializeField] Button stopButton;
         [SerializeField] Button spinButton;
+        [SerializeField] Button newGameButton;
+        [SerializeField] Button quitGameButton;
+
+        [Header("UI elements")]
         [SerializeField] PickerWheel pickerWheel;
-        [SerializeField] TMPro.TextMeshProUGUI playerNameText;
+        [SerializeField] TMPro.TextMeshProUGUI[] playerNameText;
         [SerializeField] Image playerImage;
+        [SerializeField] TMPro.TextMeshProUGUI titleRoundsText;
+        [SerializeField] TMPro.TextMeshProUGUI titleTimerText;
+
 
         [Header("Audio")]
-        [SerializeField] AudioClip timerTicking;
-        [SerializeField] AudioClip timerAlarm;
-        [SerializeField] AudioClip answerCorrect;
-        [SerializeField] AudioClip answerError;
+        [SerializeField] AudioManager audioManager;
 
-        AudioSource _audio;
         GameStatus m_GameStatus;
         CurrentGame _currentGame;
-        TimerController _timer;
-        AudioSource _timerAudio;
+        TimerController _timerQuestion;
+        TimerController _timerGame;
+        bool _timerGameStarted;
         Image _roundImage;
 
         int _answerIndex;
@@ -89,9 +93,10 @@ namespace Trivia
 
         public void QuestionAnswered(int index)
         {
-            _timer.StopTimer();
-            _timerAudio.Stop();
+            _timerQuestion.StopTimer();
             _answerIndex = index;
+
+            audioManager.StopGameAudio();
             SetGameStatus(GameStatus.answered);
         }
 
@@ -108,8 +113,10 @@ namespace Trivia
                 {
                     if (m_GameStatus == GameStatus.start)
                     {
+                        _currentGame.Reset(playerConfiguration);
+                        _timerGameStarted = false;
+
                         SetGameStatus(GameStatus.menuPanel);
-                        _currentGame.Reset();
                         ShowMenu();
                     }
                     yield return null;
@@ -132,14 +139,28 @@ namespace Trivia
 
         void ShowScore()
         {
+            SetGameStatus(GameStatus.scorePanel);
+
             gameCanvas.SetActive(false);
             menuCanvas.SetActive(false);
             scoreCanvas.SetActive(true);
+
+            var playerPanel = scoreCanvas.GetComponentInChildren<PlayerPanelController>(true);
+            playerPanel.ShowScore();
         }
 
         void StartPlaying()
         {
-            _timer.seconds = playerConfiguration.MaxQuestionTime;
+            _timerQuestion.seconds = playerConfiguration.MaxQuestionTime;
+
+            if (playerConfiguration.useGameMinutes)
+            {
+                _timerGame.StopTimer();
+                _timerGame.minutes = playerConfiguration.TotalGameMinutes;
+            }
+
+            titleTimerText.gameObject.SetActive(false);
+            audioManager.PlayMusicClip(AudioManager.MusicClip.startTheme);
 
             menuCanvas.SetActive(false);
             scoreCanvas.SetActive(false);
@@ -157,12 +178,10 @@ namespace Trivia
             answersObject.SetActive(false);
             countdownTimer.SetActive(false);
             fullAnswerText.gameObject.SetActive(true);
-            spinButton.interactable = true;
-            FadeRoundBackground();
 
-            var player = GetCurrentPlayer();
-            playerNameText.text = player.Name;
-            playerImage.sprite = player.Icon;
+            ActivateSpinButton(true);
+            FadeRoundBackground();
+            SetPlayer();
 
             while (m_GameStatus == GameStatus.spinWheel)
                 yield return null;
@@ -184,8 +203,8 @@ namespace Trivia
             CreateAnswers(q.Answers, q.Correct);
 
             countdownTimer.SetActive(true);
-            _timer.StartTimer();
-            _timerAudio.PlayOneShot(timerTicking);
+            audioManager.PlayGameClip(AudioManager.GameClip.Ticking);
+            _timerQuestion.StartTimer();
             _answerIndex = -1;
 
             while (m_GameStatus == GameStatus.question)
@@ -210,19 +229,20 @@ namespace Trivia
             {
                 _answerButtons[_correctIndex].image.sprite = correct;
                 if (_answerIndex != -1)
-                    _audio.PlayOneShot(answerError);
+                    audioManager.PlayGameClip(AudioManager.GameClip.Error);
 
                 yield return new WaitForSeconds(3f);
 
-                _currentGame.Player++;
+                _currentGame.PlayerNr++;
                 _currentGame.Round++;
 
-                if (_currentGame.Player > playerConfiguration.TotalPlayers - 1)
+                if (_currentGame.PlayerNr > playerConfiguration.TotalPlayers - 1)
                 {
-                    _currentGame.Player++;
-                    if (_currentGame.Round > playerConfiguration.TotalRounds)
+                    _currentGame.PlayerNr = 0;
+
+                    if (!playerConfiguration.useGameMinutes && _currentGame.Round > playerConfiguration.TotalGameRounds
+                        || playerConfiguration.useGameMinutes && _timerGame.GetRemainingSeconds() == 0)
                     {
-                        SetGameStatus(GameStatus.scorePanel);
                         ShowScore();
                         yield break;
                     }
@@ -231,8 +251,8 @@ namespace Trivia
             }
             else
             {
-                _audio.PlayOneShot(answerCorrect);
-                _currentGame.Correct++;
+                audioManager.PlayGameClip(AudioManager.GameClip.Correct);
+                _currentGame.AddScore();
 
                 yield return new WaitForSeconds(2f);
 
@@ -246,15 +266,20 @@ namespace Trivia
             pickerWheel.SetPieces(GetAllCatagories());
 
             startButton.onClick.AddListener(() => StartPlaying());
+            stopButton.onClick.AddListener(() => ShowScore());
+            newGameButton.onClick.AddListener(() => SetGameStatus(GameStatus.start));
+            quitGameButton.onClick.AddListener(() => SetGameStatus(GameStatus.quit));
+
             spinButton.onClick.AddListener(() =>
             {
-                spinButton.interactable = false;
+                ActivateSpinButton(false);
                 SetButtonText(spinButton, "Draaien");
 
                 pickerWheel.OnSpinStart(() =>
                 {
                     fullAnswerText.gameObject.SetActive(false);
                     textQuestionController.ClearText();
+                    audioManager.StopMusicAudio(true);
                 });
 
                 pickerWheel.OnSpinEnd(wheelPiece =>
@@ -264,19 +289,12 @@ namespace Trivia
                 });
                 pickerWheel.Spin();
             });
-            stopButton.onClick.AddListener(() =>
-            {
-                print("stoppie");
-            });
 
             _roundImage = answersObject.GetComponentInParent<Image>();
+            TryGetComponent(out _timerGame);
+            countdownTimer.TryGetComponent(out _timerQuestion);
 
-            TryGetComponent(out _audio);
-
-            countdownTimer.TryGetComponent(out _timer);
-            countdownTimer.TryGetComponent(out _timerAudio);
-
-            _timer.onTimerEnd.AddListener(HandleTimerEnd);
+            _timerQuestion.onTimerEnd.AddListener(HandleTimerEnd);
 
             foreach (CategoryModel cat in m_TriviaConfiguraton.Categories)
                 StartCoroutine(cat.TextQuestions.LoadQuestions());
@@ -308,6 +326,25 @@ namespace Trivia
             }
         }
 
+        void ActivateSpinButton(bool active)
+        {
+            spinButton.interactable = active;
+            spinButton.transform.DOMoveY(active ? 80 : -80, 1f).SetEase(Ease.InOutSine);
+
+            var toScale = active ? new Vector3(1f, 1f, 1f) : new Vector3(.1f, .1f, .1f);
+            playerNameText[1].transform.localScale = active ? new Vector3(.1f, .1f, .1f) : new Vector3(1f, 1f, 1f);
+
+            if (active)
+                playerNameText[1].gameObject.SetActive(true);
+
+            playerNameText[1].transform.DOScale(toScale, 1f)
+                .SetEase(Ease.InOutSine)
+                .OnComplete(() =>
+                {
+                    if (!active) playerNameText[1].gameObject.SetActive(false);
+                });
+        }
+
         void FadeRoundBackground(bool fadeIn = false)
         {
             float target;
@@ -327,12 +364,35 @@ namespace Trivia
             _roundImage.DOFade(target, 1f).SetEase(easing);
         }
 
+        void SetPlayer()
+        {
+            var player = GetCurrentPlayer();
+            _currentGame.Player = player;
+
+            playerNameText[0].text = player.Name;
+            playerNameText[1].text = player.Name;
+            playerImage.sprite = player.Icon;
+
+            var orgScale = playerImage.transform.localScale;
+            var scaleTo = orgScale * 1.3f;
+
+            playerImage.transform.DOScale(scaleTo, 1f)
+                .SetEase(Ease.InOutSine)
+                .OnComplete(() =>
+                {
+                    playerImage.transform.DOScale(orgScale, 1f)
+                        .SetEase(Ease.OutBounce)
+                        .SetDelay(.5f);
+                });
+
+        }
+
         void HandleTimerEnd()
         {
             SetGameStatus(GameStatus.answered);
 
-            _timerAudio.Stop();
-            _timerAudio.PlayOneShot(timerAlarm);
+            audioManager.StopGameAudio();
+            audioManager.PlayGameClip(AudioManager.GameClip.Alarm);
         }
 
         void SetGameStatus(GameStatus status)
@@ -343,6 +403,16 @@ namespace Trivia
 
         void SetCategory(Category category)
         {
+            if (playerConfiguration.useGameMinutes)
+            {
+                if (!_timerGameStarted)
+                {
+                    _timerGameStarted = true;
+                    titleTimerText.gameObject.SetActive(true);
+                    _timerGame.StartTimer();
+                }
+            }
+
             _currentGame.Category = category;
             SetGameStatus(GameStatus.question);
         }
@@ -357,25 +427,29 @@ namespace Trivia
 
         public List<PlayerModel> GetPlayers() => playerConfiguration.Players;
 
-        PlayerModel GetCurrentPlayer() => playerConfiguration.Players[_currentGame.Player];
+        PlayerModel GetCurrentPlayer() => playerConfiguration.Players[_currentGame.PlayerNr];
 
         QuestionTextModel GetTextQuestion() => m_TriviaConfiguraton.GetTextQuestion(_currentGame.Category);
-
     }
 
     struct CurrentGame
     {
-        public int Player;
+        public PlayerModel Player;
+        public int PlayerNr;
         public int Round;
         public int Question;
-        public int Correct;
-
         public Category Category;
 
-        public void Reset()
+        public void AddScore() => Player.Points++;
+
+        public void Reset(PlayersConfiguration config)
         {
-            Player = 0;
+            PlayerNr = 0;
             Round = 1;
+
+            foreach (var player in config.Players)
+                player.Points = 0;
+
         }
     }
 }

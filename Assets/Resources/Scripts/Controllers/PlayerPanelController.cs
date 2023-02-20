@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using static Trivia.GameManager;
+using static UnityEngine.UI.CanvasScaler;
 
 namespace Trivia
 {
@@ -14,12 +15,21 @@ namespace Trivia
         [SerializeField] Transform newPlayerTemplate;
         [SerializeField] bool scoreMode;
 
-        void Start() => StartCoroutine(Initialize());
-
-        IEnumerator Initialize()
+        void Start()
         {
+            if (!scoreMode)
+                StartCoroutine(CreatePlayers());
+        }
+
+        public void ShowScore() => StartCoroutine(CreatePlayers());
+
+        IEnumerator CreatePlayers()
+        {
+            RemovePlayers();
+
             template.gameObject.SetActive(false);
             newPlayerTemplate.gameObject.SetActive(!scoreMode);
+
             ShowRemoveButton(template);
             ShowPoints(template);
 
@@ -53,7 +63,14 @@ namespace Trivia
             }
         }
 
-
+        void RemovePlayers()
+        {
+            for (var i = gameObject.transform.childCount - 1; i >= 0; i--)
+            {
+                if (gameObject.transform.GetChild(i).gameObject.name.EndsWith("(Clone)"))
+                    Destroy(gameObject.transform.GetChild(i).gameObject);
+            }
+        }
         void ShowRemoveButton(Transform playerTemplate)
         {
             var buttonObj = playerTemplate.GetComponentsInChildren<Button>(true).FirstOrDefault(c => c.name == "Remove Button");
@@ -81,7 +98,7 @@ namespace Trivia
 
         void SetPoints(Transform panel, int points)
         {
-            if (scoreMode)
+            if (scoreMode || true)
             {
                 var pointsObj = panel.GetComponentsInChildren<TextMeshProUGUI>(true).FirstOrDefault(c => c.name == "points");
 

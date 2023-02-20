@@ -46,8 +46,6 @@ namespace Trivia
                 };
             }
 
-            Debug.Log("Category: " + category.ToString());
-            Debug.Log("Total: " + TotalQuestions);
             var questions = Questions.List?.Where(q => !q.isAsked).ToList();
 
             if (!questions.Any())

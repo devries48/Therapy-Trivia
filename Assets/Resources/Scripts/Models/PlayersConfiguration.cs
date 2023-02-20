@@ -6,8 +6,12 @@ namespace Trivia
     [CreateAssetMenu(menuName = "Trivia/Create Players Configuration", fileName = "Trivia Players Configuration")]
     public class PlayersConfiguration : ScriptableObject
     {
-        public int TotalRounds;
+        public bool useGameMinutes;
+        public int TotalGameMinutes;
+        public int TotalGameRounds;
+
         public int MaxQuestionTime;
+        public bool DecreaseQuestionTime;
 
         public List<PlayerModel> Players;
         public int TotalPlayers => Players?.Count ?? 0;

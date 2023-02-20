@@ -14,7 +14,6 @@ namespace Trivia
 
         public QuestionTextModel GetTextQuestion(Category category)
         {
-            Debug.Log("Get Question: "+ category);
             var cat = Categories.FirstOrDefault(c => c.Type == category);
             return cat.TextQuestions.GetQuestion();
         }
