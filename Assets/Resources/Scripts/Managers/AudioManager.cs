@@ -64,7 +64,7 @@ public class AudioManager : MonoBehaviour
         if (fade)
             StartCoroutine(FadeOut(musicAudio, 4f));
         else
-            gameAudio.Stop();
+            StartCoroutine(FadeOut(musicAudio, 1f));
     }
 
     public void StopGameAudio()

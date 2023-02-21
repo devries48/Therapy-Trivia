@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Trivia Player Configuration
   m_EditorClassIdentifier: 
   useGameMinutes: 1
-  TotalGameMinutes: 1
+  TotalGameMinutes: 5
   TotalGameRounds: 0
   MinQuestionTime: 3
   MaxQuestionTime: 6

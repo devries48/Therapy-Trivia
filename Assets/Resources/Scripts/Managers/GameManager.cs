@@ -34,7 +34,7 @@ namespace Trivia
         #endregion
 
         #region enums
-        public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, quit }
+        public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, stop, quit }
         public enum Category { history, nature, science, tv, music, sport }
         #endregion
 
@@ -119,8 +119,6 @@ namespace Trivia
         #region gameflow/loops
         void StartPlaying()
         {
-            _timerQuestion.seconds = playerConfiguration.MaxQuestionTime;
-
             if (playerConfiguration.useGameMinutes)
             {
                 _timerGame.StopTimer();
@@ -152,7 +150,10 @@ namespace Trivia
                         _currentGame.Reset(playerConfiguration);
                         _timerGameStarted = false;
 
-                        SetGameStatus(GameStatus.menuPanel);
+                        ShowMenu();
+                    }
+                    else if (m_GameStatus == GameStatus.stop)
+                    {
                         ShowMenu();
                     }
                     else if (m_GameStatus == GameStatus.quit)
@@ -195,6 +196,12 @@ namespace Trivia
         // - show: timer, answers
         IEnumerator QuestionStartLoop()
         {
+            if (m_GameStatus == GameStatus.stop)
+                yield break;
+
+            if (m_GameStatus == GameStatus.stop)
+                print("deze had nie gemogen");
+
             FadeRoundBackground(true);
 
             var q = GetTextQuestion();
@@ -218,6 +225,9 @@ namespace Trivia
         // Process the anwers
         IEnumerator QuestionAnswerLoop()
         {
+            if (m_GameStatus == GameStatus.stop)
+                yield break;
+
             _currentGame.Question++;
 
             var buttons = answersObject.GetComponentsInChildren<Button>();
@@ -273,7 +283,7 @@ namespace Trivia
             pickerWheel.SetPieces(GetAllCatagories());
 
             startButton.onClick.AddListener(() => StartPlaying());
-            stopButton.onClick.AddListener(() => ShowScore());
+            stopButton.onClick.AddListener(() => SetGameStatus(GameStatus.stop));
             newGameButton.onClick.AddListener(() => SetGameStatus(GameStatus.start));
             quitGameButton.onClick.AddListener(() => SetGameStatus(GameStatus.quit));
 
@@ -305,11 +315,16 @@ namespace Trivia
 
             foreach (CategoryModel cat in m_TriviaConfiguraton.Categories)
                 StartCoroutine(cat.TextQuestions.LoadQuestions());
-        } 
+        }
         #endregion
 
         void ShowMenu()
         {
+            SetGameStatus(GameStatus.menuPanel);
+
+            audioManager.StopGameAudio();
+            audioManager.StopMusicAudio(false);
+
             gameCanvas.SetActive(false);
             scoreCanvas.SetActive(false);
             menuCanvas.SetActive(true);
@@ -317,7 +332,6 @@ namespace Trivia
 
         void ShowScore()
         {
-            audioManager.StopGameAudio();
             SetGameStatus(GameStatus.scorePanel);
 
             gameCanvas.SetActive(false);
@@ -393,28 +407,6 @@ namespace Trivia
             _roundImage.DOFade(target, 1f).SetEase(easing);
         }
 
-        void SetPlayer()
-        {
-            var player = GetCurrentPlayer();
-            _currentGame.Player = player;
-
-            PlayerNameText[0].text = player.Name;
-            PlayerNameText[1].text = player.Name;
-            playerImage.sprite = player.Icon;
-
-            var orgScale = playerImage.transform.localScale;
-            var scaleTo = orgScale * 1.3f;
-
-            playerImage.transform.DOScale(scaleTo, 1f)
-                .SetEase(Ease.InOutSine)
-                .OnComplete(() =>
-                {
-                    playerImage.transform.DOScale(orgScale, 1f)
-                        .SetEase(Ease.OutBounce)
-                        .SetDelay(.5f);
-                });
-
-        }
 
         void HandleTimerEnd()
         {
@@ -424,9 +416,42 @@ namespace Trivia
             audioManager.PlayGameClip(AudioManager.GameClip.Alarm);
         }
 
+        void SetPlayer()
+        {
+            var player = GetCurrentPlayer();
+
+            if (_currentGame.Player != player)
+            {
+                _currentGame.Player = player;
+                _currentGame.QuestionTime = playerConfiguration.MaxQuestionTime;
+                _timerQuestion.seconds = _currentGame.QuestionTime;
+            }
+            else
+            {
+                _timerQuestion.seconds = _currentGame.QuestionCorrect(playerConfiguration);
+                return;
+            }
+
+            PlayerNameText[0].text = player.Name;
+            PlayerNameText[1].text = player.Name;
+            playerImage.sprite = player.Icon;
+
+            var orgScale = playerImage.transform.localScale;
+            var scaleTo = orgScale * 1.5f;
+
+            playerImage.transform.DOScale(scaleTo, .5f)
+                .SetEase(Ease.InOutSine)
+                .OnComplete(() =>
+                {
+                    playerImage.transform.DOScale(orgScale, .5f)
+                        .SetEase(Ease.OutBounce)
+                        .SetDelay(.25f);
+                });
+        }
+
         void SetGameStatus(GameStatus status)
         {
-            print(status);
+            print($"STATUS: {status}");
             m_GameStatus = status;
         }
 
@@ -464,7 +489,6 @@ namespace Trivia
 		Application.Quit();
 #endif
         }
-
     }
 
     struct CurrentGame
@@ -474,8 +498,17 @@ namespace Trivia
         public int Round;
         public int Question;
         public Category Category;
+        public int QuestionTime;
 
         public void AddScore() => Player.Points++;
+
+        public int QuestionCorrect(PlayersConfiguration config)
+        {
+            if (config.DecreaseQuestionTime && QuestionTime > config.MinQuestionTime)
+                QuestionTime--;
+
+            return QuestionTime;
+        }
 
         public void Reset(PlayersConfiguration config)
         {

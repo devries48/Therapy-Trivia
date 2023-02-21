@@ -40,6 +40,7 @@ public class TimerController : MonoBehaviour
     public bool hoursDisplay = false;
     public bool minutesDisplay = true;
     public bool secondsDisplay = true;
+    public bool deciSecondsDisplay = false;
 
     [Space]
 
@@ -326,8 +327,7 @@ public class TimerController : MonoBehaviour
     public string DisplayFormattedTime(double remainingSeconds)
     {
         string convertedNumber;
-        float hours, minutes, seconds;
-        RemainingSecondsToHHMMSSMMM(remainingSeconds, out hours, out minutes, out seconds);
+        RemainingSecondsToHHMMSSMMM(remainingSeconds, out float hours, out float minutes, out float seconds, out float deciSeconds);
 
         string HoursFormat()
         {
@@ -363,18 +363,33 @@ public class TimerController : MonoBehaviour
             }
             return null;
         }
+        string DeciSecondsFormat()
+        {
+            if (deciSecondsDisplay)
+            {
+                string deciSecFormatted;
+                deciSecFormatted = string.Format("{0:0}", deciSeconds);
+                return ":" + deciSecFormatted;
+            }
+            return null;
+        }
 
-
-        convertedNumber = HoursFormat() + MinutesFormat() + SecondsFormat();
+        convertedNumber = HoursFormat() + MinutesFormat() + SecondsFormat() + DeciSecondsFormat();
 
         return convertedNumber;
     }
 
-    private static void RemainingSecondsToHHMMSSMMM(double totalSeconds, out float hours, out float minutes, out float seconds)
+    private static void RemainingSecondsToHHMMSSMMM(double totalSeconds, out float hours, out float minutes, out float seconds, out float milli)
     {
-        hours = Mathf.FloorToInt((float)totalSeconds / 60 / 60);
-        minutes = Mathf.FloorToInt(((float)totalSeconds / 60) - ((float)hours * 60));
-        seconds = Mathf.FloorToInt((float)totalSeconds - ((float)hours * 60 * 60) - ((float)minutes * 60));
+        //hours = Mathf.FloorToInt((float)totalSeconds / 60 / 60);
+        //minutes = Mathf.FloorToInt(((float)totalSeconds / 60) - ((float)hours * 60));
+        //seconds = Mathf.FloorToInt((float)totalSeconds - ((float)hours * 60 * 60) - ((float)minutes * 60));
+
+        var ts = TimeSpan.FromSeconds(totalSeconds);
+        hours = ts.Hours;
+        minutes = ts.Minutes;
+        seconds = ts.Seconds;
+        milli = ts.Milliseconds;
     }
     private void OnValidate()
     {
