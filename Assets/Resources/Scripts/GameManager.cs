@@ -1,6 +1,7 @@
 ﻿using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,8 @@ namespace Trivia
     {
         #region singleton
         public static GameManager Instance => __instance;
+
+        public TextMeshProUGUI[] PlayerNameText { get => playerNameText; set => playerNameText = value; }
 
         static GameManager __instance;
 
@@ -30,10 +33,12 @@ namespace Trivia
         }
         #endregion
 
+        #region enums
         public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, quit }
         public enum Category { history, nature, science, tv, music, sport }
+        #endregion
 
-
+        #region editor fields
         [Header("Configuration")]
         public TriviaConfiguration m_TriviaConfiguraton;
         [SerializeField] PlayersConfiguration playerConfiguration;
@@ -48,7 +53,7 @@ namespace Trivia
         [SerializeField] GameObject answersObject;
         [SerializeField] Button answerTemplate;
         [SerializeField] GameObject countdownTimer;
-        [SerializeField] TMPro.TextMeshProUGUI fullAnswerText;
+        [SerializeField] TextMeshProUGUI fullAnswerText;
 
         [Header("Answer button styles")]
         [SerializeField] Sprite normal;
@@ -64,15 +69,16 @@ namespace Trivia
 
         [Header("UI elements")]
         [SerializeField] PickerWheel pickerWheel;
-        [SerializeField] TMPro.TextMeshProUGUI[] playerNameText;
+        [SerializeField] TextMeshProUGUI[] playerNameText;
         [SerializeField] Image playerImage;
-        [SerializeField] TMPro.TextMeshProUGUI titleRoundsText;
-        [SerializeField] TMPro.TextMeshProUGUI titleTimerText;
-
+        [SerializeField] TextMeshProUGUI titleRoundsText;
+        [SerializeField] TextMeshProUGUI titleTimerText;
 
         [Header("Audio")]
         [SerializeField] AudioManager audioManager;
+        #endregion
 
+        #region fields
         GameStatus m_GameStatus;
         CurrentGame _currentGame;
         TimerController _timerQuestion;
@@ -82,7 +88,9 @@ namespace Trivia
 
         int _answerIndex;
         List<Button> _answerButtons;
-        private int _correctIndex;
+        int _correctIndex;
+
+        #endregion
 
         void Start()
         {
@@ -90,6 +98,10 @@ namespace Trivia
             Initialize();
             StartCoroutine(GameLoop());
         }
+
+        #region public mehods (GetAllCatagories, GetPlayers, QuestiomAdded, QuestionAnswered)
+        public List<CategoryModel> GetAllCatagories() => m_TriviaConfiguraton.Categories;
+        public List<PlayerModel> GetPlayers() => playerConfiguration.Players;
 
         public void QuestionAnswered(int index)
         {
@@ -102,53 +114,9 @@ namespace Trivia
 
         public void QuestionAdded(Category category) => m_TriviaConfiguraton.RaiseCategoryConfigChangedEvent(category);
 
-        IEnumerator GameLoop()
-        {
-            SetGameStatus(GameStatus.start);
-            _currentGame = new CurrentGame();
+        #endregion
 
-            while (m_GameStatus != GameStatus.quit)
-            {
-                while (m_GameStatus != GameStatus.spinWheel && m_GameStatus != GameStatus.question)
-                {
-                    if (m_GameStatus == GameStatus.start)
-                    {
-                        _currentGame.Reset(playerConfiguration);
-                        _timerGameStarted = false;
-
-                        SetGameStatus(GameStatus.menuPanel);
-                        ShowMenu();
-                    }
-                    yield return null;
-                }
-
-                yield return StartCoroutine(SpinWheelLoop());
-                yield return StartCoroutine(QuestionStartLoop());
-                yield return StartCoroutine(QuestionAnswerLoop());
-
-                System.GC.Collect();
-            }
-        }
-
-        void ShowMenu()
-        {
-            gameCanvas.SetActive(false);
-            scoreCanvas.SetActive(false);
-            menuCanvas.SetActive(true);
-        }
-
-        void ShowScore()
-        {
-            SetGameStatus(GameStatus.scorePanel);
-
-            gameCanvas.SetActive(false);
-            menuCanvas.SetActive(false);
-            scoreCanvas.SetActive(true);
-
-            var playerPanel = scoreCanvas.GetComponentInChildren<PlayerPanelController>(true);
-            playerPanel.ShowScore();
-        }
-
+        #region gameflow/loops
         void StartPlaying()
         {
             _timerQuestion.seconds = playerConfiguration.MaxQuestionTime;
@@ -167,6 +135,42 @@ namespace Trivia
             gameCanvas.SetActive(true);
 
             SetGameStatus(GameStatus.spinWheel);
+        }
+
+
+        IEnumerator GameLoop()
+        {
+            SetGameStatus(GameStatus.start);
+            _currentGame = new CurrentGame();
+
+            while (m_GameStatus != GameStatus.quit)
+            {
+                while (m_GameStatus != GameStatus.spinWheel && m_GameStatus != GameStatus.question)
+                {
+                    if (m_GameStatus == GameStatus.start)
+                    {
+                        _currentGame.Reset(playerConfiguration);
+                        _timerGameStarted = false;
+
+                        SetGameStatus(GameStatus.menuPanel);
+                        ShowMenu();
+                    }
+                    else if (m_GameStatus == GameStatus.quit)
+                        break;
+
+                    yield return null;
+                }
+
+                if (m_GameStatus == GameStatus.quit)
+                    break;
+
+                yield return StartCoroutine(SpinWheelLoop());
+                yield return StartCoroutine(QuestionStartLoop());
+                yield return StartCoroutine(QuestionAnswerLoop());
+
+                System.GC.Collect();
+            }
+            GameQuit();
         }
 
         // Wait for the currentplayer to spin the wheel. 
@@ -260,6 +264,9 @@ namespace Trivia
             }
         }
 
+        #endregion
+
+        #region initialize
         void Initialize()
         {
             _answerButtons = new List<Button>();
@@ -298,8 +305,30 @@ namespace Trivia
 
             foreach (CategoryModel cat in m_TriviaConfiguraton.Categories)
                 StartCoroutine(cat.TextQuestions.LoadQuestions());
+        } 
+        #endregion
+
+        void ShowMenu()
+        {
+            gameCanvas.SetActive(false);
+            scoreCanvas.SetActive(false);
+            menuCanvas.SetActive(true);
         }
 
+        void ShowScore()
+        {
+            audioManager.StopGameAudio();
+            SetGameStatus(GameStatus.scorePanel);
+
+            gameCanvas.SetActive(false);
+            menuCanvas.SetActive(false);
+            scoreCanvas.SetActive(true);
+
+            var playerPanel = scoreCanvas.GetComponentInChildren<PlayerPanelController>(true);
+            playerPanel.ShowScore();
+
+            audioManager.PlayMusicClip(AudioManager.MusicClip.endTheme);
+        }
 
         void CreateAnswers(List<string> answers, int correctAnswerIndex)
         {
@@ -332,16 +361,16 @@ namespace Trivia
             spinButton.transform.DOMoveY(active ? 80 : -80, 1f).SetEase(Ease.InOutSine);
 
             var toScale = active ? new Vector3(1f, 1f, 1f) : new Vector3(.1f, .1f, .1f);
-            playerNameText[1].transform.localScale = active ? new Vector3(.1f, .1f, .1f) : new Vector3(1f, 1f, 1f);
+            PlayerNameText[1].transform.localScale = active ? new Vector3(.1f, .1f, .1f) : new Vector3(1f, 1f, 1f);
 
             if (active)
-                playerNameText[1].gameObject.SetActive(true);
+                PlayerNameText[1].gameObject.SetActive(true);
 
-            playerNameText[1].transform.DOScale(toScale, 1f)
+            PlayerNameText[1].transform.DOScale(toScale, 1f)
                 .SetEase(Ease.InOutSine)
                 .OnComplete(() =>
                 {
-                    if (!active) playerNameText[1].gameObject.SetActive(false);
+                    if (!active) PlayerNameText[1].gameObject.SetActive(false);
                 });
         }
 
@@ -369,8 +398,8 @@ namespace Trivia
             var player = GetCurrentPlayer();
             _currentGame.Player = player;
 
-            playerNameText[0].text = player.Name;
-            playerNameText[1].text = player.Name;
+            PlayerNameText[0].text = player.Name;
+            PlayerNameText[1].text = player.Name;
             playerImage.sprite = player.Icon;
 
             var orgScale = playerImage.transform.localScale;
@@ -419,17 +448,23 @@ namespace Trivia
 
         void SetButtonText(Button button, string text)
         {
-            var buttontext = button.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
+            var buttontext = button.GetComponentInChildren<TextMeshProUGUI>(true);
             buttontext.text = text;
         }
-
-        public List<CategoryModel> GetAllCatagories() => m_TriviaConfiguraton.Categories;
-
-        public List<PlayerModel> GetPlayers() => playerConfiguration.Players;
 
         PlayerModel GetCurrentPlayer() => playerConfiguration.Players[_currentGame.PlayerNr];
 
         QuestionTextModel GetTextQuestion() => m_TriviaConfiguraton.GetTextQuestion(_currentGame.Category);
+
+        void GameQuit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+		Application.Quit();
+#endif
+        }
+
     }
 
     struct CurrentGame

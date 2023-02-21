@@ -39,7 +39,7 @@ public class AudioManager : MonoBehaviour
             StartCoroutine(FadeIn(musicAudio, .5f));
             PlayMusicAudioClip(startTheme);
         }
-        else if (clip == MusicClip.startTheme)
+        else if (clip == MusicClip.endTheme)
         {
             PlayMusicAudioClip(endTheme);
         }

@@ -10,6 +10,7 @@ namespace Trivia
         public int TotalGameMinutes;
         public int TotalGameRounds;
 
+        public int MinQuestionTime;
         public int MaxQuestionTime;
         public bool DecreaseQuestionTime;
 
@@ -23,8 +24,6 @@ namespace Trivia
         public string Name;
         public Sprite Icon;
 
-        internal int Rounds;
-        internal int Questions;
         internal int Points;
     }
 

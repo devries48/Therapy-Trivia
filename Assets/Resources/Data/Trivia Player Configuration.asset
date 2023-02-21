@@ -15,7 +15,8 @@ MonoBehaviour:
   useGameMinutes: 1
   TotalGameMinutes: 1
   TotalGameRounds: 0
-  MaxQuestionTime: 8
+  MinQuestionTime: 3
+  MaxQuestionTime: 6
   DecreaseQuestionTime: 1
   Players:
   - Name: Team Kip
