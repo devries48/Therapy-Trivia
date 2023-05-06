@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-
-using static Trivia.GameManager;
+using static Enums;
 
 namespace Trivia
 {
@@ -13,8 +12,6 @@ namespace Trivia
     {
         #region singleton
         public static GameManager Instance => __instance;
-
-        public TextMeshProUGUI[] PlayerNameText { get => playerNameText; set => playerNameText = value; }
 
         static GameManager __instance;
 
@@ -31,11 +28,6 @@ namespace Trivia
                 throw new System.Exception("Only one instance is allowed");
             }
         }
-        #endregion
-
-        #region enums
-        public enum GameStatus { start, menuPanel, spinWheel, question, answered, scorePanel, stop, quit }
-        public enum Category { history, nature, science, tv, music, sport }
         #endregion
 
         #region editor fields
@@ -79,7 +71,7 @@ namespace Trivia
         #endregion
 
         #region fields
-        GameStatus m_GameStatus;
+        GameStatus _GameStatus;
         CurrentGame _currentGame;
         TimerController _timerQuestion;
         TimerController _timerGame;
@@ -87,10 +79,11 @@ namespace Trivia
         Image _roundImage;
 
         int _answerIndex;
-        List<Button> _answerButtons;
         int _correctIndex;
+        List<Button> _answerButtons;
 
         #endregion
+        public TextMeshProUGUI[] PlayerNameText { get => playerNameText; set => playerNameText = value; }
 
         void Start()
         {
@@ -141,28 +134,28 @@ namespace Trivia
             SetGameStatus(GameStatus.start);
             _currentGame = new CurrentGame();
 
-            while (m_GameStatus != GameStatus.quit)
+            while (_GameStatus != GameStatus.quit)
             {
-                while (m_GameStatus != GameStatus.spinWheel && m_GameStatus != GameStatus.question)
+                while (_GameStatus != GameStatus.spinWheel && _GameStatus != GameStatus.question)
                 {
-                    if (m_GameStatus == GameStatus.start)
+                    if (_GameStatus == GameStatus.start)
                     {
                         _currentGame.Reset(playerConfiguration);
                         _timerGameStarted = false;
 
                         ShowMenu();
                     }
-                    else if (m_GameStatus == GameStatus.stop)
+                    else if (_GameStatus == GameStatus.stop)
                     {
                         ShowMenu();
                     }
-                    else if (m_GameStatus == GameStatus.quit)
+                    else if (_GameStatus == GameStatus.quit)
                         break;
 
                     yield return null;
                 }
 
-                if (m_GameStatus == GameStatus.quit)
+                if (_GameStatus == GameStatus.quit)
                     break;
 
                 yield return StartCoroutine(SpinWheelLoop());
@@ -188,7 +181,7 @@ namespace Trivia
             FadeRoundBackground();
             SetPlayer();
 
-            while (m_GameStatus == GameStatus.spinWheel)
+            while (_GameStatus == GameStatus.spinWheel)
                 yield return null;
         }
 
@@ -196,11 +189,8 @@ namespace Trivia
         // - show: timer, answers
         IEnumerator QuestionStartLoop()
         {
-            if (m_GameStatus == GameStatus.stop)
+            if (_GameStatus == GameStatus.stop)
                 yield break;
-
-            if (m_GameStatus == GameStatus.stop)
-                print("deze had nie gemogen");
 
             FadeRoundBackground(true);
 
@@ -218,14 +208,14 @@ namespace Trivia
             _timerQuestion.StartTimer();
             _answerIndex = -1;
 
-            while (m_GameStatus == GameStatus.question)
+            while (_GameStatus == GameStatus.question)
                 yield return null;
         }
 
         // Process the anwers
         IEnumerator QuestionAnswerLoop()
         {
-            if (m_GameStatus == GameStatus.stop)
+            if (_GameStatus == GameStatus.stop)
                 yield break;
 
             _currentGame.Question++;
@@ -452,7 +442,7 @@ namespace Trivia
         void SetGameStatus(GameStatus status)
         {
             print($"STATUS: {status}");
-            m_GameStatus = status;
+            _GameStatus = status;
         }
 
         void SetCategory(Category category)

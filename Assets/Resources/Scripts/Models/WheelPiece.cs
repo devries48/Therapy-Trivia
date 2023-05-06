@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using static Trivia.GameManager;
+using static Enums;
 
 namespace Trivia
 {
