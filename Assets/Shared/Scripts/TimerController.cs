@@ -182,8 +182,8 @@ public class TimerController : MonoBehaviour
             //Timer has ended from counting downwards
             timeRemaining = 0;
             timerRunning = false;
-            onTimerEnd.Invoke();
             DisplayInTextObject();
+            onTimerEnd.Invoke();
         }
     }
 

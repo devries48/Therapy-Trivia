@@ -11,4 +11,5 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/Samples/Sweet Land GUI/Scenes/Windows.unity
     guid: 0f4919d449a6ecb4497b7a25dd4fcba4
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.input.settings: {fileID: 11400000, guid: dfde3ef05cea7f44eb7d73d9564d5e83, type: 2}

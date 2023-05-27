@@ -44,17 +44,16 @@ namespace Trivia
 
         Vector2 pieceMinSize = new(81f, 146f);
         Vector2 pieceMaxSize = new(144f, 213f);
-        int piecesMin = 2;
-        int piecesMax = 12;
+        readonly int piecesMin = 2;
+        readonly int piecesMax = 12;
 
         float pieceAngle;
         float halfPieceAngle;
         float halfPieceAngleWithPaddings;
 
         double accumulatedWeight;
-        System.Random rand = new();
-
-        List<int> nonZeroChancesIndices = new();
+        readonly System.Random rand = new();
+        readonly List<int> nonZeroChancesIndices = new();
 
         void Start()
         {
@@ -73,7 +72,7 @@ namespace Trivia
                 {
                     Icon = category.Icon,
                     Label = category.Name,
-                    Category=category.Type,
+                    Category = category.Type,
                     Chance = 100
                 };
                 pieces.Add(piece);
@@ -91,7 +90,7 @@ namespace Trivia
 
         void SetupPieces()
         {
-            if (wheelPieces.Length==0) return;
+            if (wheelPieces.Length == 0) return;
 
             pieceAngle = 360 / wheelPieces.Length;
             halfPieceAngle = pieceAngle / 2f;
@@ -162,7 +161,7 @@ namespace Trivia
                 float rightOffset = (angle - halfPieceAngleWithPaddings) % 360;
                 float leftOffset = (angle + halfPieceAngleWithPaddings) % 360;
                 float randomAngle = Random.Range(leftOffset, rightOffset);
-
+                
                 Vector3 targetRotation = Vector3.back * (randomAngle + 2 * 360 * spinDuration);
 
                 //float prevAngle = wheelCircle.eulerAngles.z + halfPieceAngle ;
