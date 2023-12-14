@@ -23,6 +23,28 @@ namespace Trivia
 
         public void ShowScore() => StartCoroutine(CreatePlayers());
 
+        public void RemovePlayer(string playerName)
+        {
+            var model = Instance.m_PlayerConfiguration.m_playersModel;
+            model.Players.RemoveAll(p => p.Name == playerName);
+            PlayerLoader.SavePlayerConfig(model);
+            StartCoroutine(CreatePlayers());
+        }
+
+        public void AddPlayer(string playerName, Enums.AvatarType avatar)
+        {
+            var p = new PlayerModel
+            {
+                Name = playerName, Avatar = avatar,
+                Icon = Resources.Load<Sprite>("Sprites/Avatars/avatar-" + avatar)
+            };
+
+            var model = Instance.m_PlayerConfiguration.m_playersModel;
+            model.Players.Add(p);
+            PlayerLoader.SavePlayerConfig(model);
+            StartCoroutine(CreatePlayers());
+        }
+
         IEnumerator CreatePlayers()
         {
             RemovePlayers();
@@ -36,13 +58,16 @@ namespace Trivia
             while (Instance == null)
                 yield return null;
 
+            while (!Instance.m_PlayerConfiguration.m_PlayersLoaded)
+                yield return null;
+
             var players = scoreMode ? Instance.GetPlayers().OrderByDescending(p => p.Points).ToList() : Instance.GetPlayers();
             var position = 1;
             var prevPoints = 0;
 
             foreach (var player in players)
             {
-                var panel = Instantiate(template, transform);
+                var panel = Instantiate(template, template.parent);
                 SetName(panel, player.Name);
                 SetAvatar(panel, player.Icon);
 
@@ -63,14 +88,18 @@ namespace Trivia
             }
         }
 
+
+
         void RemovePlayers()
         {
-            for (var i = gameObject.transform.childCount - 1; i >= 0; i--)
+            var container = template.transform.parent;
+            for (var i = container.childCount - 1; i >= 0; i--)
             {
-                if (gameObject.transform.GetChild(i).gameObject.name.EndsWith("(Clone)"))
-                    Destroy(gameObject.transform.GetChild(i).gameObject);
+                if (container.GetChild(i).gameObject.name.EndsWith("(Clone)"))
+                    Destroy(container.GetChild(i).gameObject);
             }
         }
+
         void ShowRemoveButton(Transform playerTemplate)
         {
             var buttonObj = playerTemplate.GetComponentsInChildren<Button>(true).FirstOrDefault(c => c.name == "Remove Button");
@@ -117,7 +146,5 @@ namespace Trivia
             second.gameObject.SetActive(position == 2);
             third.gameObject.SetActive(position == 3);
         }
-
-
     }
 }

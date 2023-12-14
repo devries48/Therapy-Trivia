@@ -33,12 +33,15 @@ namespace Trivia
         #region editor fields
         [Header("Configuration")]
         public TriviaConfiguration m_TriviaConfiguraton;
-        [SerializeField] PlayersConfiguration playerConfiguration;
+        public PlayersConfiguration m_PlayerConfiguration;
 
         [Header("Screens")]
         [SerializeField] GameObject menuCanvas;
         [SerializeField] GameObject gameCanvas;
         [SerializeField] GameObject scoreCanvas;
+
+        [Header("Windows")]
+        [SerializeField] GameObject addPlayerwindow;
 
         [Header("Quiz elements")]
         [SerializeField] QuestionTextController textQuestionController;
@@ -63,7 +66,7 @@ namespace Trivia
         [SerializeField] PickerWheel pickerWheel;
         [SerializeField] TextMeshProUGUI[] playerNameText;
         [SerializeField] Image playerImage;
-        //[SerializeField] TextMeshProUGUI titleRoundsText;
+        [SerializeField] TextMeshProUGUI titleRoundsText;
         [SerializeField] TextMeshProUGUI titleTimerText;
 
         [Header("Audio")]
@@ -84,6 +87,7 @@ namespace Trivia
         List<Button> _answerButtons;
 
         #endregion
+
         public TextMeshProUGUI[] PlayerNameText { get => playerNameText; set => playerNameText = value; }
 
         void Awake()
@@ -120,7 +124,7 @@ namespace Trivia
 
         #region public mehods (GetAllCatagories, GetPlayers, QuestiomAdded, QuestionAnswered)
         public List<CategoryModel> GetAllCatagories() => m_TriviaConfiguraton.Categories;
-        public List<PlayerModel> GetPlayers() => playerConfiguration.Players;
+        public List<PlayerModel> GetPlayers() => m_PlayerConfiguration.Players;
 
         public void QuestionAnswered(int index)
         {
@@ -134,15 +138,25 @@ namespace Trivia
 
         public void QuestionAdded(Category category) => m_TriviaConfiguraton.RaiseCategoryConfigChangedEvent(category);
 
+        public void ShowAddPlayerWindow()
+        {
+            addPlayerwindow.gameObject.SetActive(true);
+        }
+
+        public void HideAddPlayerWindow()
+        {
+            addPlayerwindow.gameObject.SetActive(false);
+        }
+
         #endregion
 
         #region gameflow/loops
         void StartPlaying()
         {
-            if (playerConfiguration.useGameMinutes)
+            if (m_PlayerConfiguration.UseGameMinutes)
             {
                 _timerGame.StopTimer();
-                _timerGame.minutes = playerConfiguration.TotalGameMinutes;
+                _timerGame.minutes = m_PlayerConfiguration.TotalGameMinutes;
             }
 
             titleTimerText.gameObject.SetActive(false);
@@ -166,7 +180,7 @@ namespace Trivia
                 {
                     if (_GameStatus == GameStatus.start)
                     {
-                        _currentGame.Reset(playerConfiguration);
+                        _currentGame.Reset(m_PlayerConfiguration);
                         _timerGameStarted = false;
 
                         ShowMenu();
@@ -264,18 +278,20 @@ namespace Trivia
                 yield return new WaitForSeconds(3f);
 
                 _currentGame.PlayerNr++;
-                _currentGame.Round++;
 
-                if (_currentGame.PlayerNr > playerConfiguration.TotalPlayers - 1)
+                if (_currentGame.PlayerNr > m_PlayerConfiguration.TotalPlayers - 1)
                 {
+                    _currentGame.Round++;
                     _currentGame.PlayerNr = 0;
 
-                    if (!playerConfiguration.useGameMinutes && _currentGame.Round > playerConfiguration.TotalGameRounds
-                        || playerConfiguration.useGameMinutes && _timerGame.GetRemainingSeconds() == 0)
+                    if (!m_PlayerConfiguration.UseGameMinutes && _currentGame.Round > m_PlayerConfiguration.TotalGameRounds
+                        || m_PlayerConfiguration.UseGameMinutes && _timerGame.GetRemainingSeconds() == 0)
                     {
                         ShowScore();
                         yield break;
                     }
+
+                    titleRoundsText.text= "Ronde " + _currentGame.Round;
                 }
                 SetGameStatus(GameStatus.spinWheel);
             }
@@ -313,6 +329,10 @@ namespace Trivia
 
             foreach (CategoryModel cat in m_TriviaConfiguraton.Categories)
                 StartCoroutine(cat.TextQuestions.LoadQuestions());
+
+            StartCoroutine(m_PlayerConfiguration.LoadPlayers());
+
+            print(m_PlayerConfiguration.Players.Count);
         }
         #endregion
 
@@ -480,12 +500,12 @@ namespace Trivia
             if (_currentGame.Player != player)
             {
                 _currentGame.Player = player;
-                _currentGame.QuestionTime = playerConfiguration.MaxQuestionTime;
+                _currentGame.QuestionTime = m_PlayerConfiguration.MaxQuestionTime;
                 _timerQuestion.seconds = _currentGame.QuestionTime;
             }
             else
             {
-                _timerQuestion.seconds = _currentGame.QuestionCorrect(playerConfiguration);
+                _timerQuestion.seconds = _currentGame.QuestionCorrect(m_PlayerConfiguration);
                 return;
             }
 
@@ -514,7 +534,7 @@ namespace Trivia
 
         void SetCategory(Category category)
         {
-            if (playerConfiguration.useGameMinutes)
+            if (m_PlayerConfiguration.UseGameMinutes)
             {
                 if (!_timerGameStarted)
                 {
@@ -534,7 +554,7 @@ namespace Trivia
             buttontext.text = text;
         }
 
-        PlayerModel GetCurrentPlayer() => playerConfiguration.Players[_currentGame.PlayerNr];
+        PlayerModel GetCurrentPlayer() => m_PlayerConfiguration.Players[_currentGame.PlayerNr];
 
         QuestionTextModel GetTextQuestion() => m_TriviaConfiguraton.GetTextQuestion(_currentGame.Category);
 
