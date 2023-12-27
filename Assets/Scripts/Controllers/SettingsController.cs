@@ -10,11 +10,14 @@ public class SettingsController : MonoBehaviour
     [SerializeField] Toggle optionRounds;
     [SerializeField] Toggle optionDecrease;
     [SerializeField] Toggle optionDisplayPoints;
-
     [SerializeField] TMP_Dropdown timerDropdown;
     [SerializeField] TMP_Text roundsText;
+    [SerializeField] TMP_Dropdown timerQuestionDropdown;
+    [SerializeField] TMP_Dropdown musicDropdown;
 
+    bool _isInitialized = false;
     void Start() => StartCoroutine(Initialize());
+
     public void IncreaseRounds()
     {
         var val = int.Parse(roundsText.text);
@@ -32,16 +35,11 @@ public class SettingsController : MonoBehaviour
         }
     }
 
-    public void TimerToggleChanged(bool value)
+    public void SettingsValueChanged()
     {
-        StartCoroutine(SettingsChanged());
+        if (_isInitialized)
+            StartCoroutine(SettingsChanged());
     }
-
-    public void TimerValueChanged(int value)
-    {
-        StartCoroutine(SettingsChanged());
-    }
-
     IEnumerator Initialize()
     {
         while (Instance == null)
@@ -51,6 +49,7 @@ public class SettingsController : MonoBehaviour
         optionRounds.isOn = !Instance.m_PlayerConfiguration.UseGameMinutes;
         optionDecrease.isOn = Instance.m_PlayerConfiguration.DecreaseQuestionTime;
         roundsText.text = Instance.m_PlayerConfiguration.TotalGameRounds.ToString();
+        optionDisplayPoints.isOn = Instance.m_PlayerConfiguration.DisplayPoints;
 
         timerDropdown.value = Instance.m_PlayerConfiguration.TotalGameMinutes switch
         {
@@ -62,6 +61,21 @@ public class SettingsController : MonoBehaviour
             _ => 0
         };
 
+        timerQuestionDropdown.value = Instance.m_PlayerConfiguration.MaxQuestionTime switch
+        {
+            15 => 1,
+            20 => 2,
+            25 => 3,
+            _ => 0
+        };
+
+        musicDropdown.value = Instance.m_PlayerConfiguration.PlayIntroMusic switch
+        {
+            Trivia.IntroMusic.Round => 1,
+            Trivia.IntroMusic.Player => 2,
+            _ => 0
+        };
+        _isInitialized = true;
     }
 
     IEnumerator SettingsChanged()
@@ -72,6 +86,7 @@ public class SettingsController : MonoBehaviour
         Instance.m_PlayerConfiguration.UseGameMinutes = optionTimer.isOn;
         Instance.m_PlayerConfiguration.DecreaseQuestionTime = optionDecrease.isOn;
         Instance.m_PlayerConfiguration.TotalGameRounds = int.Parse(roundsText.text);
+        Instance.m_PlayerConfiguration.DisplayPoints = optionDisplayPoints.isOn;
 
         var minutes = timerDropdown.value switch
         {
@@ -82,7 +97,23 @@ public class SettingsController : MonoBehaviour
             5 => 30,
             _ => 1
         };
-
         Instance.m_PlayerConfiguration.TotalGameMinutes = minutes;
+
+        var seconds = timerQuestionDropdown.value switch
+        {
+            1 => 15,
+            2 => 20,
+            3 => 25,
+            _ => 10
+        };
+        Instance.m_PlayerConfiguration.MaxQuestionTime = seconds;
+
+        var music = musicDropdown.value switch
+        {
+            1 => Trivia.IntroMusic.Round,
+            2 => Trivia.IntroMusic.Player,
+            _ => Trivia.IntroMusic.Game
+        };
+        Instance.m_PlayerConfiguration.PlayIntroMusic = music;
     }
 }

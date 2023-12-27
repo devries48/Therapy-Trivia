@@ -18,6 +18,9 @@ namespace Trivia
         public int MaxQuestionTime;
         public bool DecreaseQuestionTime;
 
+        public bool DisplayPoints;
+        public IntroMusic PlayIntroMusic;
+
         public List<PlayerModel> Players => m_playersModel.Players;
         public int TotalPlayers => m_playersModel.TotalPlayers;
 
@@ -41,6 +44,13 @@ namespace Trivia
             m_playersModel.Players.Add(player);
 
         }
+    }
+
+    public enum IntroMusic
+    {
+        Game,
+        Round,
+        Player
     }
 
     [System.Serializable]

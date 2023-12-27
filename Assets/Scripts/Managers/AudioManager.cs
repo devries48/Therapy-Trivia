@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class AudioManager : MonoBehaviour
 {
-
     public enum GameClip
     {
         Ticking,
@@ -17,6 +16,9 @@ public class AudioManager : MonoBehaviour
         startTheme,
         endTheme
     }
+
+    static bool _isFading;
+    private MusicClip _currentClip;
 
     [Header("Game Clips")]
     [SerializeField] AudioClip timerTicking;
@@ -34,6 +36,8 @@ public class AudioManager : MonoBehaviour
 
     public void PlayMusicClip(MusicClip clip)
     {
+        _currentClip = clip;
+
         if (clip == MusicClip.startTheme)
         {
             StartCoroutine(FadeIn(musicAudio, .5f));
@@ -55,7 +59,6 @@ public class AudioManager : MonoBehaviour
             GameClip.Error => answerError,
             _ => null
         };
-
         PlayGameAudioClip(audioClip);
     }
 
@@ -72,6 +75,13 @@ public class AudioManager : MonoBehaviour
         gameAudio.Stop();
     }
 
+    public bool IsMusicDone()
+    {
+        return !musicAudio.isPlaying;
+    }
+
+    public bool CurrentMusicIsEndTheme => _currentClip == MusicClip.endTheme;
+
     void PlayGameAudioClip(AudioClip clip)
     {
         if (clip && gameAudio)
@@ -84,7 +94,6 @@ public class AudioManager : MonoBehaviour
             musicAudio.PlayOneShot(clip);
     }
 
-    static bool _isFading;
     static IEnumerator FadeOut(AudioSource audioSource, float FadeTime)
     {
         while (_isFading)
@@ -97,7 +106,6 @@ public class AudioManager : MonoBehaviour
         while (audioSource.volume > 0)
         {
             audioSource.volume -= startVolume * Time.deltaTime / FadeTime;
-
             yield return null;
         }
 

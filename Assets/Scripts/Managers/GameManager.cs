@@ -66,6 +66,7 @@ namespace Trivia
         [SerializeField] PickerWheel pickerWheel;
         [SerializeField] TextMeshProUGUI[] playerNameText;
         [SerializeField] Image playerImage;
+        [SerializeField] TextMeshProUGUI playerScoreText;
         [SerializeField] TextMeshProUGUI titleRoundsText;
         [SerializeField] TextMeshProUGUI titleTimerText;
 
@@ -160,8 +161,7 @@ namespace Trivia
             }
 
             titleTimerText.gameObject.SetActive(false);
-            audioManager.PlayMusicClip(AudioManager.MusicClip.startTheme);
-
+            playerScoreText.gameObject.SetActive(m_PlayerConfiguration.DisplayPoints);
             menuCanvas.SetActive(false);
             scoreCanvas.SetActive(false);
             gameCanvas.SetActive(true);
@@ -180,6 +180,8 @@ namespace Trivia
                 {
                     if (_GameStatus == GameStatus.start)
                     {
+                        textQuestionController.ClearText();
+
                         _currentGame.Reset(m_PlayerConfiguration);
                         _timerGameStarted = false;
 
@@ -188,6 +190,14 @@ namespace Trivia
                     else if (_GameStatus == GameStatus.stop)
                     {
                         ShowMenu();
+                    }
+                    else if (_GameStatus == GameStatus.scorePanel)
+                    {
+                        if (audioManager.CurrentMusicIsEndTheme && audioManager.IsMusicDone())
+                        {
+                            audioManager.PlayMusicClip(AudioManager.MusicClip.startTheme);
+                        }
+
                     }
                     else if (_GameStatus == GameStatus.quit)
                         break;
@@ -291,7 +301,7 @@ namespace Trivia
                         yield break;
                     }
 
-                    titleRoundsText.text= "Ronde " + _currentGame.Round;
+                    titleRoundsText.text = "Ronde " + _currentGame.Round;
                 }
                 SetGameStatus(GameStatus.spinWheel);
             }
@@ -299,6 +309,7 @@ namespace Trivia
             {
                 audioManager.PlayGameClip(AudioManager.GameClip.Correct);
                 _currentGame.AddScore();
+                playerScoreText.text = $"{_currentGame.Player.Points} goed";
 
                 yield return new WaitForSeconds(2f);
 
@@ -499,6 +510,13 @@ namespace Trivia
 
             if (_currentGame.Player != player)
             {
+                var music = m_PlayerConfiguration.PlayIntroMusic;
+                if (music == IntroMusic.Player ||
+                    _currentGame.PlayerNr == 0 && music == IntroMusic.Round ||
+                    _currentGame.PlayerNr == 0 && _currentGame.Round == 1 && music == IntroMusic.Game)
+                {
+                    audioManager.PlayMusicClip(AudioManager.MusicClip.startTheme);
+                }
                 _currentGame.Player = player;
                 _currentGame.QuestionTime = m_PlayerConfiguration.MaxQuestionTime;
                 _timerQuestion.seconds = _currentGame.QuestionTime;
@@ -512,6 +530,7 @@ namespace Trivia
             PlayerNameText[0].text = player.Name;
             PlayerNameText[1].text = player.Name;
             playerImage.sprite = player.Icon;
+            playerScoreText.text = $"{player.Points} goed";
 
             var orgScale = playerImage.transform.localScale;
             var scaleTo = orgScale * 1.5f;
